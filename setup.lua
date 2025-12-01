@@ -20,7 +20,9 @@ local function getFileList(repository, branchName)
 end
 
 -- Delete all files from current directory to update them
+print("Clearing existing files...")
 shell.execute("rm -r *")
+print("Fetching files from repository...")
 
 local files = getFileList(repo, branch)
 
