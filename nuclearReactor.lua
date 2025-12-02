@@ -14,15 +14,15 @@ local SIDES = {
   NUCLEAR_REACTOR_POWER_BUTTON = sides.bottom,
 }
 local ADDRESSES = {
-  TRANSPOSER = '7ca8dcff-65e0-4769-bf18-2be1d74d6c71',
-  POWER_BUTTON   = 'e9ad2e5a-a17c-4beb-be49-a4f691d59dcb'
+  TRANSPOSER = 'e589e3a5-a8fb-4895-ad80-ed19c7f9a78e',
+  POWER_BUTTON   = '56ec984d-8790-41f2-8305-d1014789c889'
 }
 --- coolant cell
 --- @type What
 local C = {
   name      = 'gregtech:gt.360k_Helium_Coolantcell',
   isDamaged = function(stack)
-    return stack.maxDamage - 1 <= stack.damage
+    return stack.maxDamage - 5 <= stack.damage
   end
 }
 --- fuel rod
@@ -95,14 +95,14 @@ end
 
 function reactor:start()
   if not self.started then
-    nuclearPowerButton.setActive(true)
+    nuclearPowerButton.setOutput(SIDES.NUCLEAR_REACTOR_POWER_BUTTON, 15)
     self.started = true
   end
 end
 
 function reactor:stop()
   if self.started then
-    nuclearPowerButton.setActive(false)
+    nuclearPowerButton.setOutput(SIDES.NUCLEAR_REACTOR_POWER_BUTTON, 0)
     self.started = false
   end
 end
@@ -132,6 +132,7 @@ function reactor:discharge()
     while transposer.getSlotStackSize(SIDES.NUCLEAR_REACTOR, slot) ~= 0 do
       -- output is blocked, waiting
       if transposer.transferItem(SIDES.NUCLEAR_REACTOR, SIDES.OUTPUT, 1, slot) == 0 then
+        print("Output is blocked, waiting to discharge slot " .. slot .. "...")
         os.sleep(5)
       end
     end
@@ -186,6 +187,7 @@ function reactor:loop()
 end
 
 function reactor:run()
+  self:stop()
   print("[RUN] Starting initialization check...")
   if not self:initializationCheck() then
     print("[RUN] FATAL: Initialization failed!")
@@ -196,9 +198,7 @@ function reactor:run()
     return
   end
   print("[RUN] Initialization successful! Starting reactor loop...")
-  local loopCount = 0
   while true do
-    loopCount = loopCount + 1
     self:loop()
     os.sleep(0.25)
   end

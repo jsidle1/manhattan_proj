@@ -1,10 +1,10 @@
 -- Function to turn the reactor_chamber component off
 
-local component = require("component")
-local shell = require("shell")
+component = require("component")
+shell = require("shell")
 
-local term = require("term")
-local args, options = shell.parse(...)
+reactor_chamber_signal = component.proxy(component.get("56ec984d-8790-41f2-8305-d1014789c889"))
 
-local reactor_chamber = component.reactor_chamber
-reactor_chamber.setActive(false)
+for side = 0, 5 do
+  reactor_chamber_signal.setOutput(side, 0)
+end
