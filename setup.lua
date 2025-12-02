@@ -39,4 +39,23 @@ end
 
 -- Copy az5 to lib/az5.lua
 shell.execute("cp az5.lua lib/az5.lua")
+
+-- Add /home/orchestrate.lua to /home/.shrc to run on startup
+local shrcPath = "/home/.shrc"
+local shrcFile = io.open(shrcPath, "a")
+if shrcFile then
+    for line in io.lines(shrcPath) do
+        if line:match("orchestrate.lua") then
+            shrcFile:close()
+            print("Setup complete.")
+            return
+        end
+    end
+    shrcFile:write("\n/home/orchestrate.lua\n")
+    shrcFile:close()
+else
+    shrcFile = io.open(shrcPath, "w")
+    shrcFile:write("/home/orchestrate.lua\n")
+    shrcFile:close()
+end
 print("Setup complete.")
