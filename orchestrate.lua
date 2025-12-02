@@ -1,5 +1,3 @@
--- If start is given as arg, run nuclearReactor.lua in a separate process with interrupt handling.
--- Monitors thread status and handles soft interrupts (^C) to trigger AZ5 emergency shutdown.
 local shell = require("shell")
 local thread = require("thread")
 local event = require("event")
@@ -15,23 +13,32 @@ if #args > 0 and args[1] == "start" then
     print("Interrupt received - initiating AZ5 shutdown...")
   end)
   
+  local input_thread = thread.create(function()
+    print("Press Enter to stop the reactor...")
+    io.read()
+    print("User requested shutdown - initiating AZ5 shutdown...")
+  end)
+  
   local monitor_thread = thread.create(function()
     while true do
       if reactor_thread:status() ~= "running" then
         print("Reactor thread no longer running - initiating AZ5 shutdown...")
         break
       end
-      os.sleep(0.5) -- Check every 500ms
+      os.sleep(0.5)
     end
   end)
   
-  -- Wait for either cleanup or monitor to trigger shutdown
-  local finished_thread = thread.waitForAny({cleanup_thread, monitor_thread})
+  -- Wait for any thread to complete
+  local finished_thread = thread.waitForAny({cleanup_thread, input_thread, monitor_thread})
   
-  -- Kill reactor thread if still running
+  -- Kill all other threads
   if reactor_thread:status() == "running" then
     reactor_thread:kill()
   end
+  cleanup_thread:kill()
+  input_thread:kill()
+  monitor_thread:kill()
   
   -- Run AZ5 emergency shutdown
   os.execute("/home/az5.lua")
