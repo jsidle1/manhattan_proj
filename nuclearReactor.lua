@@ -265,6 +265,7 @@ end
 function reactor:loop()
   self:wait_for_power_request()
   self:ensure()
+  computer.beep(50, 0.1)
   if not self.started then
     self:start()
   end

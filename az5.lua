@@ -22,6 +22,9 @@ for side = 0, 5 do
 end
 
 print("AZ5 EMERGENCY SHUTDOWN INITIATED")
-for i = 1, 5 do computer.beep(1000, 0.6) end
+-- for i = 1, 5 do computer.beep(1000, 0.6) end
+-- computer.beep(1300, 2)
+for i = 1, 5 do computer.beep(500, 0.7) computer.beep(750, 0.6)  os.sleep(1) end
 computer.beep(1300, 2)
+
 
