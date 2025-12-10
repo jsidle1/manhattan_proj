@@ -24,14 +24,18 @@ local function readAddress(path)
   return cleaned
 end
 
-local transposerAddr = readAddress("transposer_address.txt")
+-- Accept transposer and power button addresses as command-line arguments
+local shell = require('shell')
+local args, options = shell.parse(...)
+
+local transposerAddr = args[1] or readAddress("transposer_address.txt")
 if not transposerAddr then
-  error("transposer_address.txt not found. Please run setup.lua first.")
+  error("transposer_address.txt not found and no TRANSPOSER address argument provided. Please run setup.lua first.")
 end
 
-local powerButtonAddr = readAddress("power_button_address.txt")
+local powerButtonAddr = args[2] or readAddress("power_button_address.txt")
 if not powerButtonAddr then
-  error("power_button_address.txt not found. Please run setup.lua first.")
+  error("power_button_address.txt not found and no POWER_BUTTON address argument provided. Please run setup.lua first.")
 end
 
 -- Optional power request

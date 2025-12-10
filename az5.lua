@@ -4,21 +4,45 @@ component = require("component")
 shell = require("shell")
 local computer = require('computer')
 
-local powerButtonFile = io.open("power_button_address.txt", "r")
-if not powerButtonFile then
+-- Helper function to read address from file
+local function readAddress(path)
+  local f = io.open(path, "r")
+  if not f then
+    return nil
+  end
+  local raw = f:read("*a")
+  f:close()
+  if not raw then
+    return nil
+  end
+  local cleaned = raw:match("^%s*(.-)%s*$")
+  if cleaned == "" then
+    return nil
+  end
+  return cleaned
+end
+
+-- Read primary power button address
+local powerButtonAddress = readAddress("power_button_address.txt")
+if not powerButtonAddress then
   error("power_button_address.txt not found. Please run setup.lua first.")
 end
-local powerButtonAddress = powerButtonFile:read("*a"):match("^%s*(.-)%s*$")
-powerButtonFile:close()
 
-if not powerButtonAddress or powerButtonAddress == '' then
-  error("POWER_BUTTON address not configured. Please run setup.lua first.")
-end
+-- Read secondary power button address if it exists
+local secondaryPowerButtonAddress = readAddress("secondary_power_button_address.txt")
 
-reactor_chamber_signal = component.proxy(component.get(powerButtonAddress))
-
+-- Shutdown primary reactor
+local reactor_chamber_signal = component.proxy(component.get(powerButtonAddress))
 for side = 0, 5 do
   reactor_chamber_signal.setOutput(side, 0)
+end
+
+-- Shutdown secondary reactor if configured
+if secondaryPowerButtonAddress then
+  local secondary_reactor_signal = component.proxy(component.get(secondaryPowerButtonAddress))
+  for side = 0, 5 do
+    secondary_reactor_signal.setOutput(side, 0)
+  end
 end
 
 print("AZ5 EMERGENCY SHUTDOWN INITIATED")
