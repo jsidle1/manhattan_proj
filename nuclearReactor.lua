@@ -54,8 +54,8 @@ local ADDRESSES = {
 }
 
 local coolant_name        = 'gregtech:gt.360k_Helium_Coolantcell'
-local fuel_name           = 'gregtech:gt.rodUranium4'
-local fuel_depleted_name  = 'gregtech:gt.depletedRodUranium4'
+local fuel_name           = 'gregtech:gt.rodMOX4'
+local fuel_depleted_name  = 'gregtech:gt.depletedRodMOX4'
 
 --- coolant cell
 --- @type What
