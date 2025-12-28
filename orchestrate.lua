@@ -1,6 +1,7 @@
 local shell = require("shell")
 local thread = require("thread")
 local event = require("event")
+local component = require("component")
 
 local args, options = shell.parse(...)
 
@@ -43,9 +44,49 @@ local function readReactorsList(path)
   return #list > 0 and list or nil
 end
 
+local function validateReactors(list)
+  local valid = {}
+  for i, r in ipairs(list) do
+    local t = r.transposer and r.transposer:match("^%s*(.-)%s*$")
+    local p = r.powerbutton and r.powerbutton:match("^%s*(.-)%s*$")
+
+    if not t or t == "" then
+      print(string.format("[SKIP] Reactor %d: missing transposer address", i))
+    elseif not p or p == "" then
+      print(string.format("[SKIP] Reactor %d: missing power button address", i))
+    else
+      local ok_t = component.get(t)
+      local ok_p = component.get(p)
+      if not ok_t then
+        print(string.format("[SKIP] Reactor %d: transposer address '%s' not found", i, tostring(t)))
+      elseif not ok_p then
+        print(string.format("[SKIP] Reactor %d: power button address '%s' not found", i, tostring(p)))
+      else
+        table.insert(valid, {transposer = t, powerbutton = p})
+      end
+    end
+  end
+  return valid
+end
+
 local listed = readReactorsList("reactors.txt")
 if listed then
-  reactors = listed
+  local valid = validateReactors(listed)
+  if #valid == 0 then
+    print("No valid reactors found in 'reactors.txt' — falling back to legacy config files.")
+    local primaryTransposer = readAddress("transposer_address.txt")
+    local primaryPowerButton = readAddress("power_button_address.txt")
+    if primaryTransposer and primaryPowerButton then
+      table.insert(reactors, {transposer = primaryTransposer, powerbutton = primaryPowerButton})
+    end
+    local secondaryTransposer = readAddress("secondary_transposer_address.txt")
+    local secondaryPowerButton = readAddress("secondary_power_button_address.txt")
+    if secondaryTransposer and secondaryPowerButton then
+      table.insert(reactors, {transposer = secondaryTransposer, powerbutton = secondaryPowerButton})
+    end
+  else
+    reactors = valid
+  end
 else
   local primaryTransposer = readAddress("transposer_address.txt")
   local primaryPowerButton = readAddress("power_button_address.txt")
@@ -57,6 +98,15 @@ else
   if secondaryTransposer and secondaryPowerButton then
     table.insert(reactors, {transposer = secondaryTransposer, powerbutton = secondaryPowerButton})
   end
+  -- Validate fallback entries too
+  if #reactors > 0 then
+    local valid = validateReactors(reactors)
+    reactors = valid
+  end
+end
+
+if #reactors > 0 then
+  print(string.format("Found %d valid reactor(s) to start.", #reactors))
 end
 
 if #args > 0 and args[1] == "start" then

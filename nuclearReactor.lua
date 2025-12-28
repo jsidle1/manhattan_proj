@@ -96,8 +96,38 @@ local LAYOUT = {
 }
 --endregion SETUP
 
-local nuclearPowerButton = component.proxy(component.get(ADDRESSES.POWER_BUTTON))
-local transposer = component.proxy(component.get(ADDRESSES.TRANSPOSER))
+-- Validate components early and give helpful errors
+local function methodsList(addr)
+  local m = component.methods(addr) or {}
+  local t = {}
+  for k,_ in pairs(m) do table.insert(t, k) end
+  table.sort(t)
+  return table.concat(t, ", ")
+end
+
+-- Validate transposer
+local transposerAddrResolved = ADDRESSES.TRANSPOSER
+local transposer_addr = component.get(transposerAddrResolved)
+if not transposer_addr then
+  error("Transposer component not found at address: " .. tostring(transposerAddrResolved) .. ". Check your setup and 'reactors.txt'.")
+end
+local transposer_methods = component.methods(transposer_addr)
+if not (transposer_methods and transposer_methods.getInventorySize) then
+  error("Component at " .. tostring(transposerAddrResolved) .. " does not look like a transposer (missing getInventorySize). Available methods: " .. methodsList(transposer_addr))
+end
+local transposer = component.proxy(transposer_addr)
+
+-- Validate power button (accept setOutput or setActive)
+local powerButtonAddrResolved = ADDRESSES.POWER_BUTTON
+local power_addr = component.get(powerButtonAddrResolved)
+if not power_addr then
+  error("Power button component not found at address: " .. tostring(powerButtonAddrResolved) .. ". Check your setup and 'reactors.txt'.")
+end
+local power_methods = component.methods(power_addr)
+if not (power_methods and (power_methods.setOutput or power_methods.setActive)) then
+  error("Component at " .. tostring(powerButtonAddrResolved) .. " does not provide a power interface (need setOutput or setActive). Available methods: " .. methodsList(power_addr))
+end
+local nuclearPowerButton = component.proxy(power_addr)
 
 -- Optional proxy
 local power_request = nil
