@@ -5,7 +5,7 @@ local json = require('json')
 
 local args = {...}
 local branch = args[1] or 'main'
-local repo = args[2] or 'JosephKan3/manhattan_proj'
+local repo = args[2] or 'jsidle1/manhattan_proj'
 
 local function getFileList(repository, branchName)
     local url = string.format("https://api.github.com/repos/%s/contents/?ref=%s", repository, branchName)
@@ -72,24 +72,8 @@ local function setupConfig()
         return false
     end
 
-    -- For backward compatibility, write primary transposer/power_button files from the first reactor
+    -- Note: we only use 'reactors.txt' now. Legacy single-address files are not written anymore.
     local first = reactors[1]
-    local transposerFile = io.open("transposer_address.txt", "w")
-    if transposerFile then
-        transposerFile:write(first.t or "")
-        transposerFile:close()
-    else
-        print("ERROR: Could not write transposer_address.txt")
-        return false
-    end
-    local powerButtonFile = io.open("power_button_address.txt", "w")
-    if powerButtonFile then
-        powerButtonFile:write(first.p or "")
-        powerButtonFile:close()
-    else
-        print("ERROR: Could not write power_button_address.txt")
-        return false
-    end
 
     -- Write optional power request address
     if powerRequestAddr then

@@ -70,40 +70,14 @@ local function validateReactors(list)
 end
 
 local listed = readReactorsList("reactors.txt")
-if listed then
-  local valid = validateReactors(listed)
-  if #valid == 0 then
-    print("No valid reactors found in 'reactors.txt' — falling back to legacy config files.")
-    local primaryTransposer = readAddress("transposer_address.txt")
-    local primaryPowerButton = readAddress("power_button_address.txt")
-    if primaryTransposer and primaryPowerButton then
-      table.insert(reactors, {transposer = primaryTransposer, powerbutton = primaryPowerButton})
-    end
-    local secondaryTransposer = readAddress("secondary_transposer_address.txt")
-    local secondaryPowerButton = readAddress("secondary_power_button_address.txt")
-    if secondaryTransposer and secondaryPowerButton then
-      table.insert(reactors, {transposer = secondaryTransposer, powerbutton = secondaryPowerButton})
-    end
-  else
-    reactors = valid
-  end
-else
-  local primaryTransposer = readAddress("transposer_address.txt")
-  local primaryPowerButton = readAddress("power_button_address.txt")
-  if primaryTransposer and primaryPowerButton then
-    table.insert(reactors, {transposer = primaryTransposer, powerbutton = primaryPowerButton})
-  end
-  local secondaryTransposer = readAddress("secondary_transposer_address.txt")
-  local secondaryPowerButton = readAddress("secondary_power_button_address.txt")
-  if secondaryTransposer and secondaryPowerButton then
-    table.insert(reactors, {transposer = secondaryTransposer, powerbutton = secondaryPowerButton})
-  end
-  -- Validate fallback entries too
-  if #reactors > 0 then
-    local valid = validateReactors(reactors)
-    reactors = valid
-  end
+if not listed then
+  error("Configuration file 'reactors.txt' not found. Please run setup.lua to configure reactors.")
 end
+local valid = validateReactors(listed)
+if #valid == 0 then
+  error("No valid reactors found in 'reactors.txt'. Each line must be: <transposerAddr> <powerButtonAddr>")
+end
+reactors = valid
 
 if #reactors > 0 then
   print(string.format("Found %d valid reactor(s) to start.", #reactors))
@@ -114,25 +88,49 @@ if #args > 0 and args[1] == "start" then
   
   -- Create reactor threads for every configured reactor
   local reactor_threads = {}
+  local reactor_logs = {}
+
+  local function tail_print(path, maxLines)
+    maxLines = maxLines or 80
+    local f = io.open(path, "r")
+    if not f then
+      print("(no log at " .. tostring(path) .. ")")
+      return
+    end
+    local lines = {}
+    for line in f:lines() do table.insert(lines, line) end
+    f:close()
+    local start = #lines - maxLines + 1
+    if start < 1 then start = 1 end
+    for i = start, #lines do print(lines[i]) end
+  end
+
   if #reactors == 0 then
     -- No configuration found, start a single default reactor (old behavior)
+    local log = "/home/reactor_1.log"
+    reactor_logs[1] = log
     reactor_threads[1] = thread.create(function()
-      os.execute("/home/nuclearReactor.lua")
+      os.execute(string.format("lua /home/nuclearReactor.lua > %s 2>&1", log))
     end)
+    print("Starting default reactor; logs -> " .. log)
   else
     for i, cfg in ipairs(reactors) do
-      print(string.format("Starting nuclearReactor.lua for reactor %d...", i))
+      local log = string.format("/home/reactor_%d.log", i)
+      reactor_logs[i] = log
+      print(string.format("Starting nuclearReactor.lua for reactor %d (log: %s)...", i, log))
       local cmd
       if cfg.transposer and cfg.powerbutton then
-        cmd = string.format("/home/nuclearReactor.lua %s %s", cfg.transposer, cfg.powerbutton)
+        cmd = string.format("lua /home/nuclearReactor.lua %s %s > %s 2>&1", cfg.transposer, cfg.powerbutton, log)
       elseif cfg.transposer then
-        cmd = string.format("/home/nuclearReactor.lua %s", cfg.transposer)
+        cmd = string.format("lua /home/nuclearReactor.lua %s > %s 2>&1", cfg.transposer, log)
       else
-        cmd = "/home/nuclearReactor.lua"
+        cmd = string.format("lua /home/nuclearReactor.lua > %s 2>&1", log)
       end
       reactor_threads[i] = thread.create(function()
         os.execute(cmd)
       end)
+      -- Stagger starts slightly to avoid contention
+      os.sleep(0.2)
     end
   end
   
@@ -149,10 +147,16 @@ if #args > 0 and args[1] == "start" then
   
   local monitor_thread = thread.create(function()
     while true do
-      -- If any reactor thread stops, trigger shutdown
+      -- If any reactor thread stops, trigger shutdown and show its log tail
       for i, rt in ipairs(reactor_threads) do
         if rt:status() ~= "running" then
           print(string.format("Reactor %d thread no longer running - initiating AZ5 shutdown...", i))
+          local log = reactor_logs and reactor_logs[i]
+          if log then
+            print("--- Last lines of " .. log .. " ---")
+            tail_print(log, 80)
+            print("--- end log ---")
+          end
           return
         end
       end

@@ -58,30 +58,19 @@ end
 -- `activate.lua <index>` -> activate reactor at index in reactors.txt
 -- `activate.lua <address>` -> activate specific address
 local reactors = readReactorsList("reactors.txt")
-if args[1] == "all" then
-	if reactors then
-		for i, addr in ipairs(reactors) do activateAddress(addr) end
-	else
-		local primary = readAddress("power_button_address.txt")
-		local secondary = readAddress("secondary_power_button_address.txt")
-		if primary then activateAddress(primary) end
-		if secondary then activateAddress(secondary) end
-	end
+if not reactors then
+	error("Configuration file 'reactors.txt' not found. Please run setup.lua to configure reactors.")
+end
+
+if args[1] == "all" or not args[1] then
+	for i, addr in ipairs(reactors) do activateAddress(addr) end
 elseif tonumber(args[1]) then
 	local idx = tonumber(args[1])
-	if reactors and reactors[idx] then
+	if reactors[idx] then
 		activateAddress(reactors[idx])
 	else
 		print("No reactor at index " .. tostring(idx))
 	end
 elseif args[1] then
 	activateAddress(args[1])
-else
-	-- default: activate primary (legacy)
-	local primary = readAddress("power_button_address.txt")
-	if primary then
-		activateAddress(primary)
-	else
-		print("No primary power button found. Use 'activate all' or run setup.lua")
-	end
 end

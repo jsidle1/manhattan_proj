@@ -46,14 +46,7 @@ end
 
 local powerButtons = readReactorsList("reactors.txt")
 if not powerButtons then
-  -- Fallback to legacy files
-  local primary = readAddress("power_button_address.txt")
-  if not primary then
-    error("power_button_address.txt not found. Please run setup.lua first.")
-  end
-  powerButtons = {primary}
-  local secondary = readAddress("secondary_power_button_address.txt")
-  if secondary then table.insert(powerButtons, secondary) end
+  error("Configuration file 'reactors.txt' not found. Please run setup.lua to configure reactors.")
 end
 
 -- Shutdown every configured power button
